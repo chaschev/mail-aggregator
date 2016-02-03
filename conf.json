@@ -1,0 +1,28 @@
+{
+  "global":{
+    "threadCount":64,
+    "connectionLimitPerServer":8,
+    "timeoutSec":60,
+    "retries":5
+  },
+  "mailServers":[
+    {
+      "name":"mail.ru",
+      "address":"imap.mail.ru",
+      "port":993,
+      "mailboxes":[
+        {
+          "email":{
+            "name":"chaschev@mail.ru"
+          },
+          "folders":[
+            {
+              "name":"Inbox",
+              "status":"fetched"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
