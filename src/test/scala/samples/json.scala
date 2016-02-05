@@ -8,6 +8,8 @@ import org.json4s.native.Serialization.{read, write}
 
 import com.chaschev.mail.MailApp.GlobalContext.jsonFormats
 
+import scala.collection.mutable
+
 /**
   * Created by andrey on 2/2/16.
   */
@@ -16,7 +18,7 @@ object json {
     val ser = Serialization.writePretty(JsonConfiguration(
       GlobalConfiguration(),
       List(
-        MailServer("mail.ru", "addr", mailboxes =  Mailbox(EmailAddress("chaschev@mail.ru"), folders = List(
+        MailServer("mail.ru", "addr", mailboxes =  Mailbox(EmailAddress("chaschev@mail.ru"), folders = mutable.MutableList(
           MailFolder("Inbox", DateTime.now, MailStatus.fetched)
         )) :: Nil)
       )

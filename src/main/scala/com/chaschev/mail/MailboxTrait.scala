@@ -8,7 +8,7 @@ import scala.collection.mutable.MutableList
 /**
   * Created by andrey on 2/3/16.
   */
-trait MailboxTrait[T <: MailFolder] {
+trait MailboxTrait[T <: MailFolderTrait] {
   def lastUpdate: Option[DateTime]
 
   val email: EmailAddress

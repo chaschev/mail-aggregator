@@ -2,6 +2,7 @@ package com.chaschev.mail
 
 import java.io.File
 import java.nio.file.{Files, Path, Paths}
+import javax.mail.Message
 
 import com.chaschev.mail.MailStatus.MailStatus
 import org.joda.time.DateTime
@@ -32,11 +33,17 @@ case class MailMessage(
   def notFetched: Boolean = num == 0 || status != MailStatus.fetched
 }
 
+object MailMessage {
+  def from(msg: Message): MailMessage = {
+    MailMessage(msg.getMessageNumber, new DateTime(msg.getSentDate), MailStatus.fetched)
+  }
+}
+
 
 case class Mailbox(
     email: EmailAddress,
     folders: mutable.MutableList[MailFolder],
-    lastUpdate: DateTime
+    lastUpdate: Option[DateTime] = Some(new DateTime(0))
 ) extends MailboxTrait[MailFolder]
 
 case class MailServer (

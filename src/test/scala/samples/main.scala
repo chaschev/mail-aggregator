@@ -1,10 +1,7 @@
 package samples
 
-import java.util.concurrent.Callable
-
-import com.chaschev.mail.AppOptions.{FORCE_FETCH, FETCH_MODE}
-import com.chaschev.mail.{ActiveStore, CacheManager, AppOptions}
 import com.chaschev.mail.MailApp.GlobalContext
+import com.chaschev.mail.{ActiveStore, AppOptions}
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
 
@@ -16,11 +13,12 @@ object main {
 
   def main(args: Array[String]) {
 
+    logger.info("parsing command line")
     val options = new AppOptions(args)
 
     import GlobalContext.cacheManager
 
-    if(options.has(FETCH_MODE)){
+    if(options.has(options.FETCH_MODE)){
       cacheManager.init()
 
       for(mailServer <- GlobalContext.conf.mailServers) {
@@ -31,7 +29,7 @@ object main {
               try {
                 var updateInterval = Duration.parse(GlobalContext.conf.global.updateInterval)
                 var updatedRecently = mailbox.updatedInLast(updateInterval)
-                var forceFetch = options.has(FORCE_FETCH)
+                var forceFetch = options.has(options.FORCE_FETCH)
 
                 val updateNeeded = forceFetch || !updatedRecently
 
@@ -51,6 +49,7 @@ object main {
                       } finally {
                         connection.release(mailbox, storeOpt.get)
                       }
+                      case None =>
                     }
 
                     if(storeOpt.isDefined) {
@@ -70,7 +69,7 @@ object main {
 
       }
     } else
-    if(options.has(AppOptions.PRINT_GRAPH_MODE)){
+    if(options.has(options.PRINT_GRAPH_MODE)){
       GlobalContext.cacheManager.init()
 
     } else {

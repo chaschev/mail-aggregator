@@ -1,7 +1,8 @@
 package com.chaschev.mail
 
 import java.util.concurrent.{Semaphore, ConcurrentHashMap}
-import javax.mail.{Folder, Session, Store}
+import javax.mail.search.{ComparisonTerm, ReceivedDateTerm}
+import javax.mail.{Message, Folder, Session, Store}
 
 import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail.MailApp.GlobalContext._
@@ -16,6 +17,10 @@ import scala.collection.convert.decorateAsScala._
   * Created by andrey on 2/3/16.
   */
 case class ActiveStore(server: MailServer, mail: Mailbox, store: Store, startedAt: DateTime = new DateTime()) {
+  def getServerFolder(folder: MailFolderCached): Folder = {
+    store.getFolder(folder.name)
+  }
+
   def getFolders: List[MailFolder] = {
     var folders: List[Folder] = store.getDefaultFolder.list().toList.filter(x => (x.getType & javax.mail.Folder.HOLDS_MESSAGES) != 0)
 
@@ -51,6 +56,8 @@ class ServerConnection(val server: MailServer) {
     if (!semaphore.tryAcquire(1)) return None
 
     val store = ServerConnection.session.getStore("imaps")
+
+    store.connect(server.address, server.port, mail.email.name, PasswordManager.getPassword(mail))
 
     val activeStore = ActiveStore(GlobalContext.conf.findServer(mail), mail, store)
 
@@ -122,17 +129,30 @@ class ConnectionManager {
     for (folder <- mailboxCached.folders) {
       val notFetched = folder.findAllNotFetched
 
-      folder.lastUpdate
+      val serverFolder = activeStore.getServerFolder(folder)
 
-      //todo fetch for last update
+      val fetchFromNum = folder.lastMessageNumber + 1
+
+      val maxMessageNumber = serverFolder.getMessageCount
+
+      var i = fetchFromNum
+
+      while(i <= maxMessageNumber) {
+        val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize)
+        logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
+
+        val messages = serverFolder.getMessages(1, maxMessageNumber)
+
+        folder.messages ++= messages.map {msg => MailMessage.from(msg)}
+
+        cacheManager.updateStoredMailbox(mailServer, mailboxCached)
+
+        i = fetchUpto + 1
+      }
+
+      serverFolder.getMessages
+
     }
   }
-
-
-  val maxPerBox: Int = GlobalContext.conf.global.connectionLimitPerServer
-
-  //email -> store
-
-
 }
 

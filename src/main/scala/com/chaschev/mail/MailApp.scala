@@ -107,10 +107,9 @@ object MailApp {
       val limit = 20
       var count = 0
 
-      inbox.
 
       for (message <- messages) {
-        message.getMessageNumber
+        val message1: Message = message
         count = count + 1
         if (count > limit) System.exit(0)
         println(message.getSubject())

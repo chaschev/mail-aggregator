@@ -17,6 +17,7 @@ case class GlobalConfiguration(
     connectionLimitPerServer: Int = 8,
     timeoutSec: Int = 60,
     retries: Int = 5,
+    batchSize: Int = 10,
     updateInterval: String = "1d"
 )
 

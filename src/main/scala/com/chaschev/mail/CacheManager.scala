@@ -10,6 +10,7 @@ import org.joda.time.{Duration, DateTime}
 import org.json4s.native.Serialization._
 
 import scala.collection.mutable
+import GlobalContext.jsonFormats
 import scala.collection.mutable.MutableList
 
 /**
@@ -17,7 +18,7 @@ import scala.collection.mutable.MutableList
   */
 case class CacheManager(){
   def updateStoredMailbox(mailServer: MailServer, mailboxCached: MailboxCached): Unit = {
-    mailboxCached.toFile(CacheManager.getPath(mailServer, mailboxCached).toFile)
+    mailboxCached.save(CacheManager.getPath(mailServer, mailboxCached).toFile)
   }
 
   def loadMailbox(mailServer: MailServer, mailbox: Mailbox): MailboxCached = {
@@ -41,13 +42,15 @@ case class CacheManager(){
 }
 
 object MailboxCached {
+  val logger: Logger = LogManager.getLogger(MailboxCached)
+
   def fromFile(file: File): MailboxCached =
     read[MailboxCached](new BufferedReader(new FileReader(file)))
-
-
 }
 
 case class MailboxCached(email: EmailAddress, folders: mutable.MutableList[MailFolderCached]) extends MailboxTrait[MailFolderCached] {
+  import MailboxCached.logger
+
   def findFirstNotFetched: Option[MailFolderCached] =
     folders.find(f => f.status != fetched)
 
@@ -63,8 +66,10 @@ case class MailboxCached(email: EmailAddress, folders: mutable.MutableList[MailF
     }
   }
 
-  def toFile(file: File): Unit =
+  def save(file: File): Unit = {
+    logger.info(s"updating $file")
     write(this, new BufferedWriter(new FileWriter(file)))
+  }
 }
 
 
@@ -92,6 +97,14 @@ class MailFolderCached(
     }
   }
 
+  def lastMessageNumber: Int = {
+    messages.lastOption match {
+      case Some(msg) => msg.num
+      case None => 0
+    }
+
+  }
+
   def updateStatus(): Unit = {
     findFirstNotFetched match {
       case Some(msg) => status = msg.status
@@ -108,7 +121,7 @@ case object CacheManager {
 
   def makeFsSafe(s: String): String = s.replaceAll("[\\W^.]+", "")
 
-  def getPath(mailServer: MailServer, mailbox: MailboxTrait): Path = {
+  def getPath[T <: MailFolderTrait](mailServer: MailServer, mailbox: MailboxTrait[T]): Path = {
     getPath(mailServer.address, mailbox.email.name)
   }
 
