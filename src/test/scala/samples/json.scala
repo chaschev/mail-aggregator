@@ -1,6 +1,7 @@
 package samples
 
 import com.chaschev.mail._
+import org.joda.time.DateTime
 import org.json4s.native.Serialization
 
 import org.json4s.native.Serialization.{read, write}
@@ -16,7 +17,7 @@ object json {
       GlobalConfiguration(),
       List(
         MailServer("mail.ru", "addr", mailboxes =  Mailbox(EmailAddress("chaschev@mail.ru"), folders = List(
-          MailFolder("Inbox", MailStatus.fetched)
+          MailFolder("Inbox", DateTime.now, MailStatus.fetched)
         )) :: Nil)
       )
     ))

@@ -19,66 +19,25 @@ case class finished() extends ProgressStatus
 
 case class MailFolder(
    name: String,
+   lastUpdate: DateTime,
    status: MailStatus
-)
-
-
-case class MailFolderEntryCached(
-    name: String,
-    status: MailStatus,
-    messages: List[MailMessage]
-)
-
-
-object MailFolderCache {
-  def fromFile(file: File): MailFolderCache ={
-    ???
-  }
-}
-
-case class MailFolderCache(
-   file: File,
-   entries: MutableList[MailFolderEntryCached]
-) {
-
-}
-
+) extends MailFolderTrait
 
 
 case class MailMessage(
+  num: Int = 0,
   date: DateTime,
   status: MailStatus
-)
+) {
+  def notFetched: Boolean = num == 0 || status != MailStatus.fetched
+}
+
 
 case class Mailbox(
-                  email: EmailAddress,
-                  folders: List[MailFolder] = Nil
-                  ) {
-  //to update loaded configuration from server
-  def mergeFolders(folders: List[MailFolder]): Mailbox = {
-    val map1 = this.folders.groupBy(_.name).mapValues(_.head)
-    val map2 = folders.groupBy(_.name).mapValues(_.head)
-
-    val result: MutableList[MailFolder] = MutableList()
-
-    for(f <- this.folders){
-      result += (if (map2.contains(f.name)) {
-        map2(f.name)
-      } else {
-        f
-      })
-    }
-
-    for(f <- folders){
-      if(!map1.contains(f.name)){
-        result += f
-      }
-    }
-
-    this.copy(folders = result.toList)
-  }
-
-}
+    email: EmailAddress,
+    folders: mutable.MutableList[MailFolder],
+    lastUpdate: DateTime
+) extends MailboxTrait[MailFolder]
 
 case class MailServer (
   name: String,
@@ -87,5 +46,7 @@ case class MailServer (
   mailboxes: List[Mailbox]
   ) {
 
-
+  def findMailbox(email: EmailAddress): Mailbox = {
+    mailboxes.find(_.email.equals(email)).get
+  }
 }

@@ -1,29 +1,37 @@
 package com.chaschev.mail
 
-import java.io.File
+import java.io.{BufferedWriter, FileWriter, File}
 import java.util.concurrent.{ExecutorService, Executors}
 import javax.mail._
 
 import org.apache.commons.io.FileUtils
+import org.apache.logging.log4j.{Logger, LogManager}
 import org.json4s.native.Serialization._
 
 /**
   * Created by andrey on 2/2/16.
   */
 object MailApp {
+  val logger: Logger = LogManager.getLogger(MailApp)
+
   class FetchMode {
     val supplierServerPool: ExecutorService = Executors.newFixedThreadPool(GlobalContext.conf.mailServers.size)
+    val connectionManager: ConnectionManager = new ConnectionManager()
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run(): Unit = {
+        logger.info(s"shutting down supplier pool")
+
         supplierServerPool.shutdown()
       }
     }) )
   }
 
   object GlobalContext {
+    val CONF_FILE = new File("conf.json")
+
     lazy val conf: JsonConfiguration = {
-      val conf = read[JsonConfiguration](FileUtils.readFileToString(new File("conf.json")))
+      val conf = read[JsonConfiguration](FileUtils.readFileToString(CONF_FILE))
 
       conf
     }
@@ -31,11 +39,16 @@ object MailApp {
     lazy val cacheManager: CacheManager = {
       val manager = new CacheManager()
 
-      manager.initFolders
-      manager.initMailFolders(conf.mailServers)
+      manager.init()
+
+      manager
     }
 
     var fetchMode: Option[FetchMode] = None
+
+    def saveConf(): Unit ={
+      writePretty(conf, new BufferedWriter(new FileWriter(CONF_FILE)))
+    }
 
     implicit val jsonFormats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all +
       new org.json4s.ext.EnumNameSerializer(MailStatus)
@@ -59,7 +72,7 @@ object MailApp {
     // create produces threadpool per server
     //
     // + fetch mode
-    // each mailbox {
+    // each mailbox thread {
     //   load messages from cache
     //    if force => force connection
     //    if less than 1days & all ok => next mailbox
@@ -93,7 +106,11 @@ object MailApp {
       val messages = inbox.getMessages()
       val limit = 20
       var count = 0
+
+      inbox.
+
       for (message <- messages) {
+        message.getMessageNumber
         count = count + 1
         if (count > limit) System.exit(0)
         println(message.getSubject())
