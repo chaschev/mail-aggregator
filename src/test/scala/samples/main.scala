@@ -1,9 +1,13 @@
 package samples
 
-import com.chaschev.mail.MailApp.GlobalContext
+import com.chaschev.mail.AppOptions.{PRINT_GRAPH_MODE, FORCE_FETCH, FETCH_MODE}
+import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
 import com.chaschev.mail.{ActiveStore, AppOptions}
+import joptsimple.OptionParser
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
+import scala.collection.convert.decorateAsJava._
+import scala.util.control.NonFatal
 
 /**
   * Created by andrey on 2/3/16.
@@ -12,24 +16,25 @@ object main {
   val logger: Logger = LogManager.getLogger(getClass)
 
   def main(args: Array[String]) {
+    AppOptions.init
 
     logger.info("parsing command line")
     val options = new AppOptions(args)
 
     import GlobalContext.cacheManager
 
-    if(options.has(options.FETCH_MODE)){
-      cacheManager.init()
-
+    if(options.has(FETCH_MODE)){
+      GlobalContext.fetchMode = Some(new FetchMode())
       for(mailServer <- GlobalContext.conf.mailServers) {
         val fetchMode = GlobalContext.fetchMode.get
+
         fetchMode.supplierServerPool.submit(new Runnable {
           override def run(): Unit = {
             for(mailbox <- mailServer.mailboxes) {
               try {
-                var updateInterval = Duration.parse(GlobalContext.conf.global.updateInterval)
-                var updatedRecently = mailbox.updatedInLast(updateInterval)
-                var forceFetch = options.has(options.FORCE_FETCH)
+                val updateInterval = Duration.standardHours(GlobalContext.conf.global.updateIntervalHours)
+                val updatedRecently = mailbox.updatedInLast(updateInterval)
+                val forceFetch = options.has(FORCE_FETCH)
 
                 val updateNeeded = forceFetch || !updatedRecently
 
@@ -58,7 +63,12 @@ object main {
                   }
 
                 }
-              } finally {
+              }
+              catch {
+                case NonFatal(e) =>
+                  logger.warn("exception in thread", e)
+              }
+              finally {
                 cacheManager.unload(mailbox)
               }
             }
@@ -69,11 +79,11 @@ object main {
 
       }
     } else
-    if(options.has(options.PRINT_GRAPH_MODE)){
+    if(options.has(PRINT_GRAPH_MODE)){
       GlobalContext.cacheManager.init()
 
     } else {
-      options.printHelpOn(100, 40)
+      println(options.printHelpOn(100, 10))
     }
   }
 }

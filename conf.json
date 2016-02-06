@@ -3,7 +3,9 @@
     "threadCount":64,
     "connectionLimitPerServer":8,
     "timeoutSec":60,
-    "retries":5
+    "retries":5,
+    "batchSize":10,
+    "updateIntervalHours":24
   },
   "mailServers":[
     {
@@ -13,14 +15,56 @@
       "mailboxes":[
         {
           "email":{
-            "name":"chaschev@mail.ru"
+            "name":"botgenrarator@mail.ru"
           },
           "folders":[
             {
-              "name":"Inbox",
-              "status":"fetched"
+              "name":"INBOX",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"arkhnikita@gmail.com",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"arhipovnikita7@gmail.com",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"arkhipovnickita@gmail.com",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"nikita.art@list.ru",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"\u0421\u043f\u0430\u043c",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u0435",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0438",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
+            },
+            {
+              "name":"\u041a\u043e\u0440\u0437\u0438\u043d\u0430",
+              "lastUpdate":"2016-02-06T00:23:53Z",
+              "status":"error"
             }
-          ]
+          ],
+          "lastUpdate":"1970-01-01T00:00:00Z"
         }
       ]
     }

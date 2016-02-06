@@ -1,17 +1,20 @@
 package com.chaschev.mail
 
-import java.util
 
+import chaschev.lang.OpenBean
 import chaschev.util.JOptOptions
-import chaschev.util.JOptOptions.parser
-import joptsimple.util.KeyValuePair
+import joptsimple.OptionParser
 import scala.collection.convert.decorateAsJava._
 
+object AppOptions {
+  val parser = OpenBean.getStaticFieldValue(classOf[chaschev.util.JOptOptions], "parser").asInstanceOf[OptionParser]
 
-/**
-  * Created by andrey on 2/3/16.
-  */
-class AppOptions(args: Array[String]) extends JOptOptions(args) {
+  def init: Unit = {
+    FORCE_FETCH
+    FETCH_MODE
+    PRINT_GRAPH_MODE
+  }
+
   val FORCE_FETCH = parser
     .accepts("force", "forces mailboxes to update")
 
@@ -20,4 +23,11 @@ class AppOptions(args: Array[String]) extends JOptOptions(args) {
 
   val PRINT_GRAPH_MODE = parser
     .acceptsAll(List("p", "print-graph").asJava, "print graph mode - scan the caches")
+}
+
+/**
+  * Created by andrey on 2/3/16.
+  */
+class AppOptions(args: Array[String]) extends JOptOptions(args) {
+
 }

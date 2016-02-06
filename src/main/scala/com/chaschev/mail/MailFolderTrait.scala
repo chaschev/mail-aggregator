@@ -9,4 +9,6 @@ trait MailFolderTrait {
   val name: String
 
   def lastUpdate: DateTime
+
+  def castTo[T <: MailFolderTrait](aClass: Class[T]) : T
 }

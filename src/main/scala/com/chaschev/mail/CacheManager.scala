@@ -2,16 +2,16 @@ package com.chaschev.mail
 
 import java.io._
 import java.nio.file.{Files, Path, Paths}
+import java.util.ArrayList
 
 import com.chaschev.mail.MailApp.GlobalContext
+import com.chaschev.mail.MailApp.GlobalContext.jsonFormats
 import com.chaschev.mail.MailStatus._
 import org.apache.logging.log4j.{LogManager, Logger}
-import org.joda.time.{Duration, DateTime}
+import org.joda.time.DateTime
 import org.json4s.native.Serialization._
 
-import scala.collection.mutable
-import GlobalContext.jsonFormats
-import scala.collection.mutable.MutableList
+import scala.collection.convert.decorateAsScala._
 
 /**
   * Created by andrey on 2/3/16.
@@ -33,7 +33,9 @@ case class CacheManager(){
   def initMailFolders(folders: List[MailServer]): Unit = {
     CacheManager.logger.info("initializing cache folders...")
 
-    Files.createDirectory(CacheManager.CACHE_PATH)
+    if(!Files.exists(CacheManager.CACHE_PATH)) {
+      Files.createDirectory(CacheManager.CACHE_PATH)
+    }
   }
 
   def unload(mailbox: Mailbox): Unit = {
@@ -48,11 +50,16 @@ object MailboxCached {
     read[MailboxCached](new BufferedReader(new FileReader(file)))
 }
 
-case class MailboxCached(email: EmailAddress, folders: mutable.MutableList[MailFolderCached]) extends MailboxTrait[MailFolderCached] {
+case class MailboxCached(
+  email: EmailAddress,
+  folders: ArrayList[MailFolderCached]
+) extends MailboxTrait[MailFolderCached] {
   import MailboxCached.logger
 
+
+
   def findFirstNotFetched: Option[MailFolderCached] =
-    folders.find(f => f.status != fetched)
+    foldersAsScala.find(f => f.status != fetched)
 
   def status: MailStatus = if(findFirstNotFetched.isDefined) error else fetched
 
@@ -61,14 +68,16 @@ case class MailboxCached(email: EmailAddress, folders: mutable.MutableList[MailF
   }*/
 
   lazy val lastUpdate: Option[DateTime] = {
-    folders.lastOption map {
+    foldersAsScala.lastOption map {
       folder => folder.lastUpdate
     }
   }
 
   def save(file: File): Unit = {
     logger.info(s"updating $file")
-    write(this, new BufferedWriter(new FileWriter(file)))
+    val out = new BufferedWriter(new FileWriter(file, false))
+    writePretty(this, out)
+    out.close()
   }
 }
 
@@ -77,28 +86,42 @@ case class MailboxCached(email: EmailAddress, folders: mutable.MutableList[MailF
 class MailFolderCached(
   val name: String,
   var status: MailStatus,
-  val messages: mutable.MutableList[MailMessage]
+  val messages: ArrayList[MailMessage]
 ) extends MailFolderTrait {
 
+  def messagesAsScala: List[MailMessage] = messages.asScala.toList
+
+
   def findFirstNotFetched: Option[MailMessage] =
-    messages.find(m => m.status != fetched)
+    messagesAsScala.find(m => m.status != fetched)
 
   def findFirstNotFetchedIndex: Int =
-    messages.indexWhere(f => f.status != fetched)
+    messagesAsScala.indexWhere(f => f.status != fetched)
 
-  def findAllNotFetched: mutable.MutableList[MailMessage] = {
-    messages.filter(_.notFetched)
+  def findAllNotFetched: List[MailMessage] = {
+    messagesAsScala.filter(_.notFetched)
   }
 
   def lastUpdate: DateTime = {
-    messages.lastOption match {
+    messagesAsScala.lastOption match {
       case Some(msg) => msg.date
       case None => new DateTime(0)
     }
   }
 
+  override def castTo[T <: MailFolderTrait](aClass: Class[T]): T = {
+    if(aClass == classOf[MailFolderCached]) return this.asInstanceOf[T]
+
+    if(aClass == classOf[MailFolder] ) {
+      return new MailFolder(name, lastUpdate, status).asInstanceOf[T]
+    }
+
+    throw new RuntimeException("shit happened in conversion")
+
+  }
+
   def lastMessageNumber: Int = {
-    messages.lastOption match {
+    messagesAsScala.lastOption match {
       case Some(msg) => msg.num
       case None => 0
     }
@@ -119,7 +142,7 @@ case object CacheManager {
 
   val CACHE_PATH = Paths.get(".cache")
 
-  def makeFsSafe(s: String): String = s.replaceAll("[\\W^.]+", "")
+  def makeFsSafe(s: String): String = s.replaceAll("[\\W^.]+", ".")
 
   def getPath[T <: MailFolderTrait](mailServer: MailServer, mailbox: MailboxTrait[T]): Path = {
     getPath(mailServer.address, mailbox.email.name)
@@ -143,7 +166,7 @@ case object CacheManager {
       if(!parent.mkdirs()) throw new RuntimeException("unable to make a parent folder: " + parent.getAbsolutePath)
     }
 
-    MailboxCached(mailbox.email, new mutable.MutableList[MailFolderCached])
+    MailboxCached(mailbox.email, new ArrayList[MailFolderCached]())
   }
 
 

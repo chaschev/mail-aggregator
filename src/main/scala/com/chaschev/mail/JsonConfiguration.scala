@@ -18,7 +18,7 @@ case class GlobalConfiguration(
     timeoutSec: Int = 60,
     retries: Int = 5,
     batchSize: Int = 10,
-    updateInterval: String = "1d"
+    updateIntervalHours: Int = 24
 )
 
 case class JsonConfiguration(
@@ -33,4 +33,5 @@ case class JsonConfiguration(
     def findServer(mail: Mailbox): MailServer = {
         mailServers.find(_.mailboxes.contains(mail)).get
     }
+
 }

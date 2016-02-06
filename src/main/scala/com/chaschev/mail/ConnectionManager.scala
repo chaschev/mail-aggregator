@@ -8,6 +8,8 @@ import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail.MailApp.GlobalContext._
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.DateTime
+import scala.collection.convert.decorateAsJava._
+
 
 import scala.collection.concurrent.Map
 
@@ -18,7 +20,11 @@ import scala.collection.convert.decorateAsScala._
   */
 case class ActiveStore(server: MailServer, mail: Mailbox, store: Store, startedAt: DateTime = new DateTime()) {
   def getServerFolder(folder: MailFolderCached): Folder = {
-    store.getFolder(folder.name)
+    val f = store.getFolder(folder.name)
+
+    f.open(Folder.READ_ONLY)
+
+    f
   }
 
   def getFolders: List[MailFolder] = {
@@ -84,6 +90,7 @@ object ConnectionManager {
 
 
 class ConnectionManager {
+
   import ConnectionManager.logger
 
   private var connections: Map[String, ServerConnection] = new ConcurrentHashMap[String, ServerConnection]().asScala
@@ -126,31 +133,33 @@ class ConnectionManager {
 
     }
 
-    for (folder <- mailboxCached.folders) {
+    for (folder <- mailboxCached.foldersAsScala) {
       val notFetched = folder.findAllNotFetched
 
       val serverFolder = activeStore.getServerFolder(folder)
 
-      val fetchFromNum = folder.lastMessageNumber + 1
+      try {
+        val fetchFromNum = folder.lastMessageNumber + 1
 
-      val maxMessageNumber = serverFolder.getMessageCount
+        val maxMessageNumber = serverFolder.getMessageCount
 
-      var i = fetchFromNum
+        var i = fetchFromNum
 
-      while(i <= maxMessageNumber) {
-        val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize)
-        logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
+        while (i <= maxMessageNumber && !Thread.interrupted()) {
+          val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize)
+          logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
 
-        val messages = serverFolder.getMessages(1, maxMessageNumber)
+          val messages = serverFolder.getMessages(1, maxMessageNumber)
 
-        folder.messages ++= messages.map {msg => MailMessage.from(msg)}
+          folder.messages.addAll(messages.map({ msg => MailMessage.from(msg) }).toList.asJava)
 
-        cacheManager.updateStoredMailbox(mailServer, mailboxCached)
+          cacheManager.updateStoredMailbox(mailServer, mailboxCached)
 
-        i = fetchUpto + 1
+          i = fetchUpto + 1
+        }
+      } finally {
+        serverFolder.close(true)
       }
-
-      serverFolder.getMessages
 
     }
   }

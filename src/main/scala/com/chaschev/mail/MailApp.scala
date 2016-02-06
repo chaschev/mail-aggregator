@@ -46,9 +46,14 @@ object MailApp {
 
     var fetchMode: Option[FetchMode] = None
 
-    def saveConf(): Unit ={
-      writePretty(conf, new BufferedWriter(new FileWriter(CONF_FILE)))
+    def saveConf(): JsonConfiguration = {
+      conf.saveToFile(CONF_FILE)
+      conf
     }
+
+    /*def saveConf(): Unit ={
+      writePretty(conf.toJsonVersion(), new BufferedWriter(new FileWriter(CONF_FILE)))
+    }*/
 
     implicit val jsonFormats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all +
       new org.json4s.ext.EnumNameSerializer(MailStatus)
