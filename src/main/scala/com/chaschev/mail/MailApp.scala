@@ -1,6 +1,6 @@
 package com.chaschev.mail
 
-import java.io.{BufferedWriter, FileWriter, File}
+import java.io.{PrintStream, BufferedWriter, FileWriter, File}
 import java.util.concurrent.{ExecutorService, Executors}
 import javax.mail._
 
@@ -46,10 +46,7 @@ object MailApp {
 
     var fetchMode: Option[FetchMode] = None
 
-    def saveConf(): JsonConfiguration = {
-      conf.saveToFile(CONF_FILE)
-      conf
-    }
+    def saveConf(): JsonConfiguration = conf.save()
 
     /*def saveConf(): Unit ={
       writePretty(conf.toJsonVersion(), new BufferedWriter(new FileWriter(CONF_FILE)))

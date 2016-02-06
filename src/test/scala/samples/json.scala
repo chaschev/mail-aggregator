@@ -26,7 +26,9 @@ class json {
     val ser = writePretty(JsonConfiguration(
       GlobalConfiguration(),
       List(
-        MailServer("mail.ru", "addr", mailboxes = Nil )
+        MailServer("mail.ru", "imap.mail.ru", mailboxes = List(Mailbox(
+          EmailAddress("botgenrarator@mail.ru"))
+        ) )
       )
     ))
 

@@ -51,15 +51,14 @@ object main {
                     storeOpt match {
                       case Some(store) => try {
                         fetchMode.connectionManager.updateMessages(mailServer, mailbox, store)
+
+                        mailServer.updateStats()
                       } finally {
                         connection.release(mailbox, storeOpt.get)
                       }
                       case None =>
                     }
 
-                    if(storeOpt.isDefined) {
-
-                    }
                   }
 
                 }
@@ -76,6 +75,7 @@ object main {
           }
         })
 
+        fetchMode.supplierServerPool.shutdown()
 
       }
     } else

@@ -1,0 +1,5 @@
+<root>
+  <item name='javax.mail.internet.MimeMessage javax.mail.Address[] getRecipients(javax.mail.Message.RecipientType)'>
+    <annotation name='org.jetbrains.annotations.Nullable'/>
+  </item>
+</root>

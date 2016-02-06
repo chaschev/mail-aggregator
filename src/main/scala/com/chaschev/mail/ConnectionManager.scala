@@ -65,7 +65,7 @@ class ServerConnection(val server: MailServer) {
 
     store.connect(server.address, server.port, mail.email.name, PasswordManager.getPassword(mail))
 
-    val activeStore = ActiveStore(GlobalContext.conf.findServer(mail), mail, store)
+    val activeStore = ActiveStore(GlobalContext.conf.findServer(mail.email.name), mail, store)
 
     activeStores.putIfAbsent(mail.email.name, activeStore)
 
@@ -116,10 +116,11 @@ class ConnectionManager {
     //merge folders from servers
 
     val mailboxCached = {
-      logger.info("updating folders in cache")
+      logger.info("loading folders from cache")
       val tempMailboxCached = cacheManager.loadMailbox(mailServer, mailbox)
 
-      tempMailboxCached.mergeFolders(currentFolders)
+      logger.info("updating folders in cache")
+      tempMailboxCached.mergeFolders(currentFolders.map{_.castTo(classOf[MailFolderCached])})
 
       cacheManager.updateStoredMailbox(mailServer, tempMailboxCached)
 
@@ -134,6 +135,8 @@ class ConnectionManager {
     }
 
     for (folder <- mailboxCached.foldersAsScala) {
+      logger.info(s"working with folder: $folder")
+
       val notFetched = folder.findAllNotFetched
 
       val serverFolder = activeStore.getServerFolder(folder)
@@ -149,16 +152,21 @@ class ConnectionManager {
           val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize)
           logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
 
-          val messages = serverFolder.getMessages(1, maxMessageNumber)
+          val messages = serverFolder.getMessages(i, maxMessageNumber)
 
           folder.messages.addAll(messages.map({ msg => MailMessage.from(msg) }).toList.asJava)
+          folder.updateStatus()
 
           cacheManager.updateStoredMailbox(mailServer, mailboxCached)
+
+          GlobalContext.saveConf()
 
           i = fetchUpto + 1
         }
       } finally {
         serverFolder.close(true)
+
+        mailbox.updateStats(mailboxCached)
       }
 
     }

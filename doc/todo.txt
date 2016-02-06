@@ -1,0 +1,5 @@
+- build a graph
+- group emails mode
+- (ok) first conversion bug
+- (ok) quadratic serialization
+- (ok) from 1 to 1

@@ -29,6 +29,19 @@ case class CacheManager(){
     initMailFolders(GlobalContext.conf.mailServers)
   }
 
+  def printStats(out: PrintStream): Unit = {
+    for(mailServer <- GlobalContext.conf.mailServers) {
+      for(mailbox <- mailServer.mailboxes) {
+        val mailBoxCached = loadMailbox(mailServer, mailbox)
+
+        for(folder <- mailBoxCached.foldersAsScala) {
+          folder.messages.size()
+        }
+      }
+    }
+  }
+
+
   // creates folders for the caches
   def initMailFolders(folders: List[MailServer]): Unit = {
     CacheManager.logger.info("initializing cache folders...")
@@ -56,8 +69,6 @@ case class MailboxCached(
 ) extends MailboxTrait[MailFolderCached] {
   import MailboxCached.logger
 
-
-
   def findFirstNotFetched: Option[MailFolderCached] =
     foldersAsScala.find(f => f.status != fetched)
 
@@ -79,11 +90,13 @@ case class MailboxCached(
     writePretty(this, out)
     out.close()
   }
+
+
 }
 
 
 
-class MailFolderCached(
+case class MailFolderCached(
   val name: String,
   var status: MailStatus,
   val messages: ArrayList[MailMessage]
@@ -145,7 +158,7 @@ case object CacheManager {
   def makeFsSafe(s: String): String = s.replaceAll("[\\W^.]+", ".")
 
   def getPath[T <: MailFolderTrait](mailServer: MailServer, mailbox: MailboxTrait[T]): Path = {
-    getPath(mailServer.address, mailbox.email.name)
+    getPath(mailServer.name, mailbox.email.name)
   }
 
   def getPath(server: String, mailbox: String): Path = {
