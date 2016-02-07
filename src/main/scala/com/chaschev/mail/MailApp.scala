@@ -44,6 +44,20 @@ object MailApp {
       manager
     }
 
+    def iterateOverMessages(f: (MailServer, Mailbox, MailboxCached, MailFolderCached, MailMessage) => Unit): Unit = {
+      for(srv <- conf.mailServers) {
+        for(mailbox <- srv.mailboxes) {
+          val mailboxCached = cacheManager.loadMailbox(srv, mailbox)
+
+          for (folder <- mailboxCached.foldersAsScala) {
+            for(message <- folder.messagesAsScala) {
+              f(srv,mailbox, mailboxCached, folder, message)
+            }
+          }
+        }
+      }
+    }
+
     var fetchMode: Option[FetchMode] = None
 
     def saveConf(): JsonConfiguration = conf.save()

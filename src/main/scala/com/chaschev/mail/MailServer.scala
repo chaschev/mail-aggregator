@@ -46,10 +46,28 @@ case class MailMessage(
   to: Array[String],
   status: MailStatus
 ) {
+  def extractEmail(s: String): String = {
+    MailMessage.emailPattern.findFirstMatchIn(s).map { matcher =>
+      matcher.group(1)
+    }.getOrElse({
+      if(s.contains("@")) {
+        s
+      }else {
+        "empty!"
+      }
+    })
+  }
+
+  def fromEmails(): Array[String] = from.map(extractEmail)
+  def toEmails(): Array[String] = to.map(extractEmail)
+
   def notFetched: Boolean = num == 0 || status != MailStatus.fetched
 }
 
 object MailMessage {
+  val emailPattern = "[<](.*[@].*)[>]".r
+
+
   def mapAddress(address: Address): String = {
     address.toString
   }
