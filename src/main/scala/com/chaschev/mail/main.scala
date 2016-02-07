@@ -92,9 +92,9 @@ object main {
 
       val nodesCSVOut = new PrintStream(new FileOutputStream("graph-nodes.csv"))
 
-      nodesCSVOut.println("Id,Label")
+      nodesCSVOut.println("Id,Label,Interval")
       for(node <- graph.list) {
-        nodesCSVOut.println(s"${node.num},${node.name}")
+        nodesCSVOut.println(s"${node.num},${node.name},")
       }
 
       nodesCSVOut.close()

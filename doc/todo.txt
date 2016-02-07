@@ -1,4 +1,5 @@
 - build a graph
+- add weights to nodes/edges
 - group emails mode
 - (ok) first conversion bug
 - (ok) quadratic serialization

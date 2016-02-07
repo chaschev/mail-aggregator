@@ -20,9 +20,16 @@ case class Graph(
     }
 
   }
+
   def add(s1: String, s2: String): Unit = {
-    val n1 = getNode(s1)
-    val n2 = getNode(s2)
+    val n1 = getOrCreateNode(s1)
+    val n2 = getOrCreateNode(s2)
+
+    addEdgeWhenNodeExists(n1, n2)
+    addEdgeWhenNodeExists(n2, n1)
+  }
+
+  private def addEdgeWhenNodeExists(n1: GraphNode, n2: GraphNode): Unit ={
     val set = graph.get(n1.name) match {
       case Some(s) => s
       case None =>
@@ -34,7 +41,7 @@ case class Graph(
     set.add(n2.name)
   }
 
-  def getNode(s: String): GraphNode ={
+  def getOrCreateNode(s: String): GraphNode ={
     stringToNode.get(s) match {
       case Some(n) => n
       case None =>
