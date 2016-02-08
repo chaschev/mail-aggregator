@@ -48,10 +48,10 @@ case class MailMessage(
 ) {
   def extractEmail(s: String): String = {
     MailMessage.emailPattern.findFirstMatchIn(s).map { matcher =>
-      matcher.group(1)
+      matcher.group(1).toLowerCase
     }.getOrElse({
       if(s.contains("@")) {
-        s
+        s.toLowerCase
       }else {
         "empty!"
       }

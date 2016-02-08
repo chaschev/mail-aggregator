@@ -8,7 +8,6 @@ import com.chaschev.mail.graph.Graph
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
 
-import scala.collection.mutable
 import scala.util.control.NonFatal
 
 /**
@@ -87,7 +86,7 @@ object main {
       val graph = Graph()
 
       GlobalContext.iterateOverMessages((srv, mailbox, mailboxCached, folder, message) => {
-        graph.addAll(message.fromEmails(), message.toEmails())
+        graph.addAllAll(message.fromEmails(), message.toEmails())
       })
 
       val nodesCSVOut = new PrintStream(new FileOutputStream("graph-nodes.csv"))
@@ -101,24 +100,16 @@ object main {
 
       val edgesCSVOut = new PrintStream(new FileOutputStream("graph-edges.csv"))
 
-      edgesCSVOut.println("Source,Target,Type,Id,Label,Interval,Weight")
+      edgesCSVOut.println("Source,Target,Type")
 
       var i = 0
       for(node1 <- graph.list) {
-        val neighborsOpt = graph.graph.get(node1.name)
-        neighborsOpt match {
-          case Some(neighborsSet) =>
-            for(name2 <- neighborsSet) {
-              val node2 = graph.stringToNode(name2)
-
-              edgesCSVOut.println(s"${node1.num},${node2.num},Undirected,$i,,,1.0")
-              i += 1
-            }
-          case None =>
-            logger.warn(s"didn't find ${node1.name}")
+        for(node2 <- graph.getNondirectSiblings(node1)) {
+          edgesCSVOut.println(s"${node1.num},${node2.num},Undirected")
+          i += 1
         }
-
       }
+
       edgesCSVOut.close()
 
     } else {

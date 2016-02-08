@@ -10,7 +10,7 @@ case class GraphNode(
 case class Graph(
   stringToNode:mutable.Map[String, GraphNode] = mutable.Map[String, GraphNode](),
   list: mutable.Buffer[GraphNode] = mutable.Buffer(),
-  graph: mutable.Map[String, mutable.Set[String]] = mutable.Map[String, mutable.Set[String]]()
+  graph: mutable.Map[String, mutable.Set[GraphNode]] = mutable.Map[String, mutable.Set[GraphNode]]()
 ) {
   def addAll(from: Iterable[String], to: Iterable[String]): Unit ={
     for(s1 <- from) {
@@ -19,6 +19,28 @@ case class Graph(
       }
     }
 
+  }
+
+  def addAllAll(from: Iterable[String], to: Iterable[String]): Unit ={
+    for(s1 <- from) {
+      for(s2 <- to) {
+        add(s1, s2)
+      }
+    }
+
+    for(s1 <- to) {
+      for(s2 <- to) {
+        if(!s1.equals(s1)) {
+          add(s1, s2)
+        }
+      }
+    }
+
+  }
+
+  // for( i < j ) get siblings for indirect traversion
+  def getNondirectSiblings(n1: GraphNode): Iterable[GraphNode] = {
+    graph.get(n1.name).map {_.filter(_.num < n1.num)}.getOrElse(List.empty)
   }
 
   def add(s1: String, s2: String): Unit = {
@@ -33,12 +55,12 @@ case class Graph(
     val set = graph.get(n1.name) match {
       case Some(s) => s
       case None =>
-        val r = mutable.Set[String]()
+        val r = mutable.Set[GraphNode]()
         graph.put(n1.name, r)
         r
     }
 
-    set.add(n2.name)
+    set.add(n2)
   }
 
   def getOrCreateNode(s: String): GraphNode ={
