@@ -14,6 +14,8 @@ import scala.collection.convert.decorateAsJava._
 import scala.collection.concurrent.Map
 
 import scala.collection.convert.decorateAsScala._
+import scala.collection.mutable
+import scala.util.control.NonFatal
 
 /**
   * Created by andrey on 2/3/16.
@@ -27,13 +29,17 @@ case class ActiveStore(server: MailServer, mail: Mailbox, store: Store, startedA
     f
   }
 
-  def getFolders: List[MailFolder] = {
-    var folders: List[Folder] = store.getDefaultFolder.list().toList.filter(x => (x.getType & javax.mail.Folder.HOLDS_MESSAGES) != 0)
+  def getFolders: List[MailFolder] = getFoldersRec(store.getDefaultFolder)
 
-    folders.map { folder =>
-      MailFolder(folder.getName, DateTime.now(), MailStatus.error)
+  private def getFoldersRec(root: Folder): List[MailFolder] = {
+    var folders: List[Folder] = root.list().toList.filter(x => (x.getType & javax.mail.Folder.HOLDS_MESSAGES) != 0)
+
+    folders.flatMap { folder =>
+      MailFolder(folder.getFullName, DateTime.now(), MailStatus.error) :: getFoldersRec(folder)
     }
   }
+
+
 }
 
 object ServerConnection {
@@ -113,6 +119,8 @@ class ConnectionManager {
 
     val currentFolders: List[MailFolder] = activeStore.getFolders
 
+    logger.info(s"found ${currentFolders.size} server folders: ${currentFolders.mkString("\n  ")}")
+
     //merge folders from servers
 
     val mailboxCached = {
@@ -148,22 +156,43 @@ class ConnectionManager {
 
         var i = fetchFromNum
 
+        logger.info(s"trying to fetch ${maxMessageNumber - i + 1} messages $fetchFromNum..$maxMessageNumber, new messages count: ${serverFolder.getNewMessageCount}")
+
         while (i <= maxMessageNumber && !Thread.interrupted()) {
-          val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize)
-          logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
+          val fetchUpto = Math.min(maxMessageNumber, i + GlobalContext.conf.global.batchSize - 1)
 
-          val messages = serverFolder.getMessages(i, maxMessageNumber)
+          if(i <= fetchUpto) {
+            logger.info(s"${mailbox.email.name}/$folder fetching from $i to $fetchUpto")
 
-          folder.messages.addAll(messages.map({ msg => MailMessage.from(msg) }).toList.asJava)
-          folder.updateStatus()
+            val messages = serverFolder.getMessages(i, fetchUpto)
 
-          cacheManager.updateStoredMailbox(mailServer, mailboxCached)
+            logger.debug(s"fetched ${messages.length} messages")
 
-          GlobalContext.saveConf()
+            var j = 0
 
-          i = fetchUpto + 1
+            val fetchedMessages = messages.map({ msg => MailMessage.from(msg) })
+            val filteredMessages: Array[MailMessage] = fetchedMessages.filter(_.isDefined).map(_.get)
+
+            if(filteredMessages.size < fetchedMessages.size) {
+              logger.info(s"could not fetch ${fetchedMessages.size - filteredMessages.size} messages")
+            }
+
+            folder.messages.addAll(filteredMessages.toList.asJava)
+            folder.updateStatus()
+
+            cacheManager.updateStoredMailbox(mailServer, mailboxCached)
+
+            GlobalContext.saveConf()
+
+            i = fetchUpto + 1
+          }
         }
-      } finally {
+      }
+      catch {
+        case NonFatal(e) =>
+          logger.warn(s"error with folder $folder", e)
+      }
+      finally {
         serverFolder.close(true)
 
         mailbox.updateStats(mailboxCached)

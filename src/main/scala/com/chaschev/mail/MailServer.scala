@@ -1,14 +1,15 @@
 package com.chaschev.mail
 
-import java.util.ArrayList
+import java.util.{Date, ArrayList}
 import javax.mail.Message.RecipientType
-import javax.mail.{Address, Message}
+import javax.mail.{MessagingException, Address, Message}
 
 import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail.MailStatus.MailStatus
 import org.joda.time.DateTime
 
 import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 
 sealed abstract class ProgressStatus
 
@@ -75,15 +76,21 @@ object MailMessage {
   def arrayFromNullAble[T: ClassTag](a: Array[T]): Array[T] =  if(a == null) Array.empty[T] else a
 
 
-  def from(msg: Message): MailMessage = {
-    MailMessage(msg.getMessageNumber,
-      new DateTime(msg.getSentDate),
-      msg.getFrom.map {mapAddress},
-      (arrayFromNullAble(msg.getRecipients(RecipientType.TO))
-        ++ arrayFromNullAble(msg.getRecipients(RecipientType.CC))
-         ++ arrayFromNullAble(msg.getRecipients(RecipientType.BCC))
-        ).map {mapAddress},
-      MailStatus.fetched)
+  def from(msg: Message): Option[MailMessage] = {
+    try {
+      Some(MailMessage(msg.getMessageNumber,
+        new DateTime(msg.getSentDate),
+        msg.getFrom.map {mapAddress},
+        (arrayFromNullAble(msg.getRecipients(RecipientType.TO))
+          ++ arrayFromNullAble(msg.getRecipients(RecipientType.CC))
+          ++ arrayFromNullAble(msg.getRecipients(RecipientType.BCC))
+          ).map {mapAddress},
+        MailStatus.fetched))
+    }catch {
+      case NonFatal(e) => None
+    }
+
+
   }
 }
 
@@ -103,6 +110,9 @@ case class Mailbox(
     )
     GlobalContext.saveConf()
   }
+
+  override def toString: String = s"Mailbox(${email.name}, ${folders.size} folders)"
+
 }
 
 case class MailServer(

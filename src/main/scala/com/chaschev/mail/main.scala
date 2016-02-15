@@ -1,6 +1,7 @@
 package com.chaschev.mail
 
 import java.io.{FileOutputStream, PrintStream}
+import java.util.concurrent.TimeUnit
 
 import com.chaschev.mail.AppOptions.{FETCH_MODE, FORCE_FETCH, PRINT_GRAPH_MODE}
 import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
@@ -31,6 +32,8 @@ object main {
 
         fetchMode.supplierServerPool.submit(new Runnable {
           override def run(): Unit = {
+            logger.info(s"found ${mailServer.mailboxes.length} mailboxes: ${mailServer.mailboxes}")
+
             for(mailbox <- mailServer.mailboxes) {
               try {
                 val updateInterval = Duration.standardHours(GlobalContext.conf.global.updateIntervalHours)
@@ -38,6 +41,8 @@ object main {
                 val forceFetch = options.has(FORCE_FETCH)
 
                 val updateNeeded = forceFetch || !updatedRecently
+
+                logger.info(s"$mailbox - updatedRecently: $updatedRecently, forceFetch: $forceFetch")
 
                 if(updateNeeded) {
                   logger.info(s"updating messages for $mailbox, updatedRecently: $updatedRecently, forceFetch: $forceFetch")
@@ -55,7 +60,7 @@ object main {
 
                         mailServer.updateStats()
                       } finally {
-                        connection.release(mailbox, storeOpt.get)
+                        connection.release(mailbox, store)
                       }
                       case None =>
                     }
@@ -76,6 +81,7 @@ object main {
           }
         })
 
+        fetchMode.supplierServerPool.awaitTermination(1, TimeUnit.HOURS)
         fetchMode.supplierServerPool.shutdown()
 
       }

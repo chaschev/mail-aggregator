@@ -52,7 +52,8 @@ case class CacheManager(){
   }
 
   def unload(mailbox: Mailbox): Unit = {
-    ???
+    CacheManager.logger.info(s"unloading $mailbox")
+
   }
 }
 
@@ -148,6 +149,7 @@ case class MailFolderCached(
     }
   }
 
+  override def toString: String = s"MailFolderCached($name, ${messages.size()} messages)"
 }
 
 case object CacheManager {
