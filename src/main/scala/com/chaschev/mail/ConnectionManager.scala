@@ -1,20 +1,16 @@
 package com.chaschev.mail
 
-import java.util.concurrent.{Semaphore, ConcurrentHashMap}
-import javax.mail.search.{ComparisonTerm, ReceivedDateTerm}
-import javax.mail.{Message, Folder, Session, Store}
+import java.util.concurrent.{ConcurrentHashMap, Semaphore}
+import javax.mail.{Folder, Session, Store}
 
 import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail.MailApp.GlobalContext._
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.DateTime
-import scala.collection.convert.decorateAsJava._
-
 
 import scala.collection.concurrent.Map
-
+import scala.collection.convert.decorateAsJava._
 import scala.collection.convert.decorateAsScala._
-import scala.collection.mutable
 import scala.util.control.NonFatal
 
 /**

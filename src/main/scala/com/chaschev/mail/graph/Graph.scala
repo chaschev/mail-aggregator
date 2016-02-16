@@ -12,6 +12,12 @@ case class Graph(
   list: mutable.Buffer[GraphNode] = mutable.Buffer(),
   graph: mutable.Map[String, mutable.Set[GraphNode]] = mutable.Map[String, mutable.Set[GraphNode]]()
 ) {
+  def isIsolated(n: GraphNode): Boolean = graph.get(n.name) match {
+    case Some(set) => set.isEmpty
+    case None => true
+  }
+
+
   def addAll(from: Iterable[String], to: Iterable[String]): Unit ={
     for(s1 <- from) {
       for(s2 <- to) {

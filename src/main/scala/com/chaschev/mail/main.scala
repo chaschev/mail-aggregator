@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import com.chaschev.mail.AppOptions.{FETCH_MODE, FORCE_FETCH, PRINT_GRAPH_MODE}
 import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
-import com.chaschev.mail.graph.Graph
+import com.chaschev.mail.graph.{GraphNode, Graph}
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
 
@@ -99,7 +99,7 @@ object main {
 
       nodesCSVOut.println("Id,Label,Interval")
       for(node <- graph.list) {
-        nodesCSVOut.println(s"${node.num},${node.name},")
+        nodesCSVOut.println(s"${node.num},${node.num} ${node.name},")
       }
 
       nodesCSVOut.close()
@@ -108,15 +108,25 @@ object main {
 
       edgesCSVOut.println("Source,Target,Type")
 
-      var i = 0
+      val nodesCount = graph.list.length
+      var edgesCount = 0
+
       for(node1 <- graph.list) {
-        for(node2 <- graph.getNondirectSiblings(node1)) {
+        val nodes2  = graph.getNondirectSiblings(node1)
+
+        if(graph.isIsolated(node1)) {
+          logger.warn(s"$node1 is isolated")
+        }
+
+        for(node2 <- nodes2) {
           edgesCSVOut.println(s"${node1.num},${node2.num},Undirected")
-          i += 1
+          edgesCount += 1
         }
       }
 
       edgesCSVOut.close()
+
+      println(s"done. nodes: $nodesCount, edges: $edgesCount")
 
     } else {
       println(options.printHelpOn(100, 10))
