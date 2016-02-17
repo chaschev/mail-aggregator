@@ -1,14 +1,19 @@
 package com.chaschev.mail
 
-import java.io.{FileOutputStream, PrintStream}
+import java.io.{File, FileOutputStream, PrintStream}
 import java.util.concurrent.TimeUnit
 
 import com.chaschev.mail.AppOptions.{FETCH_MODE, FORCE_FETCH, PRINT_GRAPH_MODE}
 import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
+import com.chaschev.mail.conf.MailboxDescs
 import com.chaschev.mail.graph.{GraphNode, Graph}
+import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
+import org.json4s.native.Serialization._
 
+import scala.collection.mutable
+import GlobalContext.jsonFormats
 import scala.util.control.NonFatal
 
 /**
@@ -83,17 +88,32 @@ object main {
 
         fetchMode.supplierServerPool.awaitTermination(1, TimeUnit.HOURS)
         fetchMode.supplierServerPool.shutdown()
-
       }
     } else
     if(options.has(PRINT_GRAPH_MODE)){
       GlobalContext.cacheManager.init()
 
+      val mailboxDescs = read[MailboxDescs](FileUtils.readFileToString(new File("mail-descs.json")))
+
+      val aliasTable = new mutable.HashMap[String, String]
+
+      for(desc <- mailboxDescs.descs) {
+        for(alias <- desc.aliases) {
+          aliasTable.put(alias, desc.name)
+        }
+      }
+
       val graph = Graph()
 
+      def aliasMapper(s: String): String = {
+        aliasTable.getOrElse(s, s)
+      }
+
       GlobalContext.iterateOverMessages((srv, mailbox, mailboxCached, folder, message) => {
-        graph.addAllAll(message.fromEmails(), message.toEmails())
+        graph.addAllAll(message.fromEmails().map(aliasMapper), message.toEmails().map(aliasMapper))
       })
+
+
 
       val nodesCSVOut = new PrintStream(new FileOutputStream("graph-nodes.csv"))
 
@@ -127,6 +147,13 @@ object main {
       edgesCSVOut.close()
 
       println(s"done. nodes: $nodesCount, edges: $edgesCount")
+      println("top writers:")
+      val toSet: Set[(String, mutable.Set[GraphNode])] = graph.graph.toSet
+      val sortedList = toSet.toList.sortBy(x => -x._2.size)
+      val top10 = sortedList.take(10)
+      for((name, set) <- top10) {
+        println(s"$name ${set.size}")
+      }
 
     } else {
       println(options.printHelpOn(100, 10))

@@ -4,6 +4,7 @@ import java.util
 
 import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail._
+import com.chaschev.mail.conf.{MailboxDesc, MailboxDescs}
 import com.google.common.collect.Lists
 import org.joda.time.DateTime
 import org.json4s.native.Serialization
@@ -51,5 +52,21 @@ class json {
     println(ser)
 
     println(read[util.ArrayList[String]](ser))
+  }
+
+  @Test
+  def testMailboxDescsSer(): Unit = {
+    val ser = writePretty(MailboxDescs(
+      List(
+        MailboxDesc("i.a.rogozina@gmail.com", List("irinarogozzina@gmail.com")),
+        MailboxDesc("arkhnikita@gmail.com", List("arkhipovnickita@gmail.com", "arhipovnikita7@gmail.com", "nikita.art@list.ru")),
+        MailboxDesc("gorronn@gmail.com", List("gorronn@gmail.com")),
+        MailboxDesc("mike.sommers.usmc@gmail.com", List("mike_sommers_usmc@gmail.com"))
+      )
+    ))
+
+    println(ser)
+
+    println(read[MailboxDescs](ser))
   }
 }
