@@ -63,7 +63,7 @@ object main {
                       case Some(store) => try {
                         fetchMode.connectionManager.updateMessages(mailServer, mailbox, store)
 
-                        mailServer.updateStats()
+                        mailServer.updateStatsOnDisks()
                       } finally {
                         connection.release(mailbox, store)
                       }
@@ -102,16 +102,16 @@ object main {
         graph.addAllAll(message.fromEmails().map(aliasTable.mapper), message.toEmails().map(aliasTable.mapper))
       })
 
-      val writer = new GraphvizWriter()
-      writer.write(graph, aliasTable,
-        new PrintStream(new FileOutputStream("graphviz.txt"))
-      )
-
-//      val writer = new GephiWriter()
+//      val writer = new GraphvizWriter()
 //      writer.write(graph, aliasTable,
-//        new PrintStream(new FileOutputStream("graph-nodes.csv")),
-//        Some(new PrintStream(new FileOutputStream("graph-edges.csv")))
+//        new PrintStream(new FileOutputStream("graphviz.txt"))
 //      )
+
+      val writer = new GephiWriter()
+      writer.write(graph, aliasTable,
+        new PrintStream(new FileOutputStream("graph-nodes.csv")),
+        Some(new PrintStream(new FileOutputStream("graph-edges.csv")))
+      )
 
       println("top writers:")
 

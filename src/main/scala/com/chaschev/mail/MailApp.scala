@@ -44,6 +44,8 @@ object MailApp {
       manager
     }
 
+    val fetchStatistics: FetchStatistics = new FetchStatistics()
+
     def iterateOverMessages(f: (MailServer, Mailbox, MailboxCached, MailFolderCached, MailMessage) => Unit): Unit = {
       for(srv <- conf.mailServers) {
         for(mailbox <- srv.mailboxes) {
@@ -109,7 +111,7 @@ object MailApp {
 
     try {
       // use imap.gmail.com for gmail
-      store.connect("imap.mail.ru", "X", "X")
+      store.connect("imap.mail.ru", "botgenrarator@mail.ru", "botgenrarator2016")
 
       val list2 = store.getDefaultFolder.list().toList.filter(x => (x.getType & javax.mail.Folder.HOLDS_MESSAGES) != 0)
 

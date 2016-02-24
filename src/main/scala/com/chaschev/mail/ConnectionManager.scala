@@ -1,7 +1,7 @@
 package com.chaschev.mail
 
 import java.util.concurrent.{ConcurrentHashMap, Semaphore}
-import javax.mail.{Folder, Session, Store}
+import javax.mail.{Multipart, Folder, Session, Store}
 
 import com.chaschev.mail.MailApp.GlobalContext
 import com.chaschev.mail.MailApp.GlobalContext._
@@ -166,12 +166,33 @@ class ConnectionManager {
 
             var j = 0
 
-            val fetchedMessages = messages.map({ msg => MailMessage.from(msg) })
-            val filteredMessages: Array[MailMessage] = fetchedMessages.filter(_.isDefined).map(_.get)
+            val fetchedMessages = messages.map({ msg =>
+              MailMessage.from(msg)
+            })
+
+            val filteredMessages: Array[MailMessage] = fetchedMessages.
+              filter({
+                case Some(msg) =>
+                  if(msg.partCount <= 0) {
+                    GlobalContext.fetchStatistics.skippedAttachments.incrementAndGet()
+                    logger.debug(s"warn - no attachment: ${msg.shortString()}")
+                    false
+                  }else {
+                    true
+                  }
+
+                  GlobalContext.fetchStatistics.total.incrementAndGet()
+                  true
+                case _ =>
+                  GlobalContext.fetchStatistics.errors.incrementAndGet()
+                  false
+              }).map(_.get)
 
             if(filteredMessages.size < fetchedMessages.size) {
               logger.info(s"could not fetch ${fetchedMessages.size - filteredMessages.size} messages")
             }
+
+//            println(filteredMessages.toList.take(5))
 
             folder.messages.addAll(filteredMessages.toList.asJava)
             folder.updateStatus()
@@ -179,6 +200,8 @@ class ConnectionManager {
             cacheManager.updateStoredMailbox(mailServer, mailboxCached)
 
             GlobalContext.saveConf()
+
+            logger.info(s"stats: ${GlobalContext.fetchStatistics}")
 
             i = fetchUpto + 1
           }
