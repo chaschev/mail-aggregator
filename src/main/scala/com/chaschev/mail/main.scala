@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.chaschev.mail.AppOptions.{FETCH_MODE, FORCE_FETCH, PRINT_GRAPH_MODE}
 import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
 import com.chaschev.mail.conf.MailboxDescs
-import com.chaschev.mail.graph.{GephiWriter, AliasTable, GraphNode, Graph}
+import com.chaschev.mail.graph._
 import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
@@ -102,12 +102,16 @@ object main {
         graph.addAllAll(message.fromEmails().map(aliasTable.mapper), message.toEmails().map(aliasTable.mapper))
       })
 
-      val writer = new GephiWriter()
-
+      val writer = new GraphvizWriter()
       writer.write(graph, aliasTable,
-        new PrintStream(new FileOutputStream("graph-nodes.csv")),
-        Some(new PrintStream(new FileOutputStream("graph-edges.csv")))
+        new PrintStream(new FileOutputStream("graphviz.txt"))
       )
+
+//      val writer = new GephiWriter()
+//      writer.write(graph, aliasTable,
+//        new PrintStream(new FileOutputStream("graph-nodes.csv")),
+//        Some(new PrintStream(new FileOutputStream("graph-edges.csv")))
+//      )
 
       println("top writers:")
 

@@ -1,8 +1,8 @@
 package com.chaschev.mail.graph
 
-import java.io.{FileOutputStream, PrintStream}
+import java.io.PrintStream
 
-import com.chaschev.mail.MailApp.GlobalContext
+import com.chaschev.mail.graph.GephiWriter._
 import org.apache.logging.log4j.{LogManager, Logger}
 
 import scala.collection.mutable
@@ -21,7 +21,7 @@ object GephiWriter {
 class GephiWriter extends GraphWriter {
   import GephiWriter.logger
 
-  override def write(graph: Graph, aliasTable: AliasTable, out1: PrintStream, out2: Option[PrintStream] = None): Unit = {
+  override def write(graph: Graph, aliasTable: AliasTable, out1: PrintStream, out2Opt: Option[PrintStream] = None): Unit = {
     out1.println("Id,Label,Interval")
 
     for(node <- graph.list) {
@@ -30,7 +30,9 @@ class GephiWriter extends GraphWriter {
 
     out1.close()
 
-    out2.get.println("Source,Target,Type")
+    val out2 = out2Opt.get
+
+    out2.println("Source,Target,Type")
 
     val nodesCount = graph.list.length
     var edgesCount = 0
@@ -43,23 +45,56 @@ class GephiWriter extends GraphWriter {
       }
 
       for(node2 <- nodes2) {
-        out2.get.println(s"${node1.num},${node2.num},Undirected")
+        out2.println(s"${node1.num},${node2.num},Undirected")
         edgesCount += 1
       }
     }
 
-    out2.get.close()
+    out2.close()
 
     println(s"done. nodes: $nodesCount, edges: $edgesCount")
-    println("top writers:")
-
-    val toSet: Set[(String, mutable.Set[GraphNode])] = graph.graph.toSet
-    val sortedList = toSet.toList.sortBy(x => -x._2.size)
-    val top10 = sortedList.take(10)
-    for((name, set) <- top10) {
-      println(s"$name ${set.size}")
-    }
   }
 }
+
+object GraphvizWriter {
+  val logger: Logger = LogManager.getLogger(getClass)
+}
+
+class GraphvizWriter extends GraphWriter {
+  import GraphvizWriter.logger
+
+  override def write(graph: Graph, aliasTable: AliasTable, out: PrintStream, out2: Option[PrintStream] = None): Unit = {
+    out.println(
+      """graph {
+ forcelabels=true;
+""")
+
+    var edgesCount = 0
+
+    for(node1 <- graph.list) {
+      out.println(s"""${node1.num} [label="${node1.name}"];""")
+    }
+
+    for(node1 <- graph.list) {
+      val nodes2  = graph.getNondirectSiblings(node1)
+
+      if(nodes2.nonEmpty) {
+        out.println(s" ${node1.num} -- {${nodes2.map{_.num}.mkString(" ")}};")
+        edgesCount += nodes2.size
+      }
+
+      if(graph.isIsolated(node1)) {
+        logger.warn(s"$node1 is isolated")
+      }
+    }
+
+    out.println("}")
+
+    out.close()
+
+    println(s"done. nodes: ${graph.list.length}, edges: $edgesCount")
+  }
+}
+
 
 
