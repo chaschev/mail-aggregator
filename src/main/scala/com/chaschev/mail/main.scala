@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.chaschev.mail.AppOptions.{FETCH_MODE, FORCE_FETCH, PRINT_GRAPH_MODE}
 import com.chaschev.mail.MailApp.{FetchMode, GlobalContext}
 import com.chaschev.mail.conf.MailboxDescs
-import com.chaschev.mail.graph.{GraphNode, Graph}
+import com.chaschev.mail.graph.{GephiWriter, AliasTable, GraphNode, Graph}
 import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.joda.time.Duration
@@ -95,59 +95,22 @@ object main {
 
       val mailboxDescs = read[MailboxDescs](FileUtils.readFileToString(new File("mail-descs.json")))
 
-      val aliasTable = new mutable.HashMap[String, String]
-
-      for(desc <- mailboxDescs.descs) {
-        for(alias <- desc.aliases) {
-          aliasTable.put(alias, desc.name)
-        }
-      }
-
+      val aliasTable = new AliasTable(mailboxDescs)
       val graph = Graph()
 
-      def aliasMapper(s: String): String = {
-        aliasTable.getOrElse(s, s)
-      }
-
       GlobalContext.iterateOverMessages((srv, mailbox, mailboxCached, folder, message) => {
-        graph.addAllAll(message.fromEmails().map(aliasMapper), message.toEmails().map(aliasMapper))
+        graph.addAllAll(message.fromEmails().map(aliasTable.mapper), message.toEmails().map(aliasTable.mapper))
       })
 
+      val writer = new GephiWriter()
 
+      writer.write(graph, aliasTable,
+        new PrintStream(new FileOutputStream("graph-nodes.csv")),
+        Some(new PrintStream(new FileOutputStream("graph-edges.csv")))
+      )
 
-      val nodesCSVOut = new PrintStream(new FileOutputStream("graph-nodes.csv"))
-
-      nodesCSVOut.println("Id,Label,Interval")
-      for(node <- graph.list) {
-        nodesCSVOut.println(s"${node.num},${node.num} ${node.name},")
-      }
-
-      nodesCSVOut.close()
-
-      val edgesCSVOut = new PrintStream(new FileOutputStream("graph-edges.csv"))
-
-      edgesCSVOut.println("Source,Target,Type")
-
-      val nodesCount = graph.list.length
-      var edgesCount = 0
-
-      for(node1 <- graph.list) {
-        val nodes2  = graph.getNondirectSiblings(node1)
-
-        if(graph.isIsolated(node1)) {
-          logger.warn(s"$node1 is isolated")
-        }
-
-        for(node2 <- nodes2) {
-          edgesCSVOut.println(s"${node1.num},${node2.num},Undirected")
-          edgesCount += 1
-        }
-      }
-
-      edgesCSVOut.close()
-
-      println(s"done. nodes: $nodesCount, edges: $edgesCount")
       println("top writers:")
+
       val toSet: Set[(String, mutable.Set[GraphNode])] = graph.graph.toSet
       val sortedList = toSet.toList.sortBy(x => -x._2.size)
       val top10 = sortedList.take(10)
